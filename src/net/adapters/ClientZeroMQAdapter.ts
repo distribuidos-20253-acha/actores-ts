@@ -1,10 +1,10 @@
 // ODIO ZEROMQ <3
 
+import { logVerbose } from "@acha/distribuidos";
 import type NetAdapter from "../NetAdapter.ts";
 
 import * as zmq from "zeromq"
-import logVerbose from "../../utils/logVerbose.ts";
-import type { BibInput, BibResponse } from "../../schemas/InputSchema.ts";
+import type { BibInput, BibResponse } from "@acha/distribuidos/schemas/InputSchema";
 
 export default class ClientZeroMQAdapter implements NetAdapter {
   private host: string;

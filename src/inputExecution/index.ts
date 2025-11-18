@@ -1,10 +1,10 @@
 import 'dotenv/config'
 import colors from 'chalk'
-import type { BibInput } from "../schemas/InputSchema.ts"
 import type NetAdapter from '../net/NetAdapter.ts'
 import ClientZeroMQAdapter from '../net/adapters/ClientZeroMQAdapter.ts'
 import replier from '../lib/Replier.ts'
-import logVerbose from '../utils/logVerbose.ts'
+import type { BibInput } from '@acha/distribuidos/schemas/InputSchema'
+import { logVerbose } from '@acha/distribuidos'
 
 const netCS: NetAdapter = new ClientZeroMQAdapter({
   host: process.env.STORAGE_MANAGER_HOST!,

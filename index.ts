@@ -1,11 +1,11 @@
 import { program } from "commander";
-import { config } from "./config.ts";
-import figlet from "figlet";
-import colors from "chalk"
 import { init, sock } from "./src/lib/ServerApp.ts";
-import { inputSchema, isValid, type BibInput } from "./src/schemas/InputSchema.ts";
 import inputExecution from "./src/inputExecution/index.ts";
 import replier from "./src/lib/Replier.ts"
+import { inputSchema, isValid, type BibInput } from "@acha/distribuidos/schemas/InputSchema";
+import { Config, showFigletTitle, writeLog } from "@acha/distribuidos";
+const config = Config.getInstance();
+config.setVersion("0.1.15")
 
 program
   .option('-v, --verbose')
@@ -25,25 +25,22 @@ if (!TYPE || !(["renew", "return", "reserve"].includes(TYPE))) {
   process.exit(1)
 }
 
-config.VERBOSE = VERBOSE
-config.TYPE = TYPE
+config.setVerbose(Boolean(VERBOSE));
+config.set("type", TYPE)
 
+showFigletTitle(`ACTOR_${(TYPE as string)}`)
 
-console.clear()
-console.log(
-  colors.red.bold(await figlet(`ACTOR_${(TYPE as string).toUpperCase()}`)),
-  '\nv 0.0.1 -', colors.yellow('created by acha')
-)
-
-if (config.TYPE == "reserve") {
+if (config.get("type") == "reserve") {
   await replier.init()
 
   for await (const [msg] of replier.sock) {
-    console.log("received something")
+    await writeLog(`Socket received a message`)
     try {
       const obj = JSON.parse(msg?.toString() ?? "")
+      await writeLog(obj)
 
       if (!(await isValid(obj))) {
+        await writeLog(`Invalid Message, cannot parse because it's invalid`)
         console.log("Cannot parse this request")
         continue;
       }
@@ -54,7 +51,7 @@ if (config.TYPE == "reserve") {
         body: qZod.data as BibInput
       })
     } catch (err) {
-      console.log(err)
+      await writeLog(`Invalid Message, cannot parse`)
       console.log("cannot parse message", msg?.toString())
     }
   }
@@ -63,10 +60,13 @@ if (config.TYPE == "reserve") {
   await init()
 
   for await (const [topic, msg] of sock) {
+    await writeLog(`Socket received a message`)
     try {
       const obj = JSON.parse(msg?.toString() ?? "")
+      await writeLog(obj)
 
       if (!(await isValid(obj))) {
+        await writeLog(`Invalid Message, cannot parse because it's invalid`)
         console.log("Cannot parse this request")
         continue;
       }
@@ -77,6 +77,7 @@ if (config.TYPE == "reserve") {
         body: qZod.data as BibInput
       })
     } catch (err) {
+      await writeLog(`Invalid Message, cannot parse`)
       console.log("cannot parse message", msg?.toString())
     }
   }
