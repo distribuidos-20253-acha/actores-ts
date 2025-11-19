@@ -1,9 +1,9 @@
 import { program } from "commander";
 import { init, sock } from "./src/lib/ServerApp.ts";
 import inputExecution from "./src/inputExecution/index.ts";
-import replier from "./src/lib/Replier.ts"
 import { inputSchema, isValid, type BibInput } from "@acha/distribuidos/schemas/InputSchema";
 import { Config, showFigletTitle, writeLog } from "@acha/distribuidos";
+import { initReplier, replier } from "./src/lib/Replier.ts";
 const config = Config.getInstance();
 config.setVersion("0.1.15")
 
@@ -31,9 +31,9 @@ config.set("type", TYPE)
 showFigletTitle(`ACTOR_${(TYPE as string)}`)
 
 if (config.get("type") == "reserve") {
-  await replier.init()
+  await initReplier()
 
-  for await (const [msg] of replier.sock) {
+  for await (const [msg] of replier) {
     await writeLog(`Socket received a message`)
     try {
       const obj = JSON.parse(msg?.toString() ?? "")
@@ -51,6 +51,7 @@ if (config.get("type") == "reserve") {
         body: qZod.data as BibInput
       })
     } catch (err) {
+      console.log(err)
       await writeLog(`Invalid Message, cannot parse`)
       console.log("cannot parse message", msg?.toString())
     }

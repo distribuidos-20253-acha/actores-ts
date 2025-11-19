@@ -1,27 +1,26 @@
+import { writeLog, writeLogSync } from "@acha/distribuidos"
 import zmq from "zeromq"
 
-const replier = new zmq.Reply()
+export const replier = new zmq.Reply()
+const [HOST, PORT] = [
+  process.env.LOAD_MANAGER_HOST,
+  process.env.LOAD_MANAGER_PORT
+]
 
-const init = (): Promise<boolean> => {
-  const host = process.env.LOAD_MANAGER_HOST
-  const port = process.env.LOAD_MANAGER_PORT
+export const initReplier = async () => {
+  await writeLog(`Trying to listen to load manager network with params [load_manager_host=${HOST}, load_manager_port=${PORT}]`)
 
-  return new Promise(async (resolve, reject) => {
-    try {
-      replier.bind(`${host}:${port}`)
-      console.log("Listening in " + `${host}:${port}`)
-      setTimeout(() => {
+  try {
+    await replier.bind(`${HOST}:${PORT}`)
+
+    setTimeout(async () => {
+      await new Promise((resolve, reject) => {
+        writeLogSync(`Sock binded [${HOST}:${PORT}]`)
+        console.log("Listening in " + `${HOST}:${PORT}`)
         resolve(true)
-      }, 500);
-    } catch (err) {
-      reject(false)
-    }
-  })
+      })
+    }, 500);
+  } catch (err) {
+    console.log(err)
+  }
 }
-
-const exportObj = {
-  init,
-  sock: replier
-}
-
-export default exportObj

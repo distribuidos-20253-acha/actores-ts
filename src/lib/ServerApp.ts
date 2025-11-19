@@ -1,6 +1,7 @@
 import * as zmq from "zeromq"
 import "dotenv/config"
-import { config } from "../../config.ts"
+import { Config, writeLog, writeLogSync } from "@acha/distribuidos"
+const config = Config.getInstance()
 
 export const sock = new zmq.Subscriber()
 const [HOST, PORT] = [
@@ -9,13 +10,17 @@ const [HOST, PORT] = [
 ]
 
 export const init = async () => {
+  await writeLog(`Trying to init actor pub/sub with params [HOST_PUBSUB=${HOST}, PORT_PUBSUB=${PORT}]`)
+
   try {
-    sock.connect(`${HOST}:${PORT}`)
-    sock.subscribe(config.TYPE)
-    console.log("Listening to " + `${HOST}:${PORT}`)
+    await sock.connect(`${HOST}:${PORT}`)
+    await sock.subscribe(config.get("type"))
+    await writeLog(`Subscribed to ${config.get("type")}`)
 
     setTimeout(async () => {
       await new Promise((resolve, reject) => {
+        writeLogSync(`Connected to [${HOST}:${PORT}]`)
+        console.log("Listening to " + `${HOST}:${PORT}`)
         resolve(true)
       })
     }, 500);

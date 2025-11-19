@@ -2,14 +2,22 @@ import 'dotenv/config'
 import colors from 'chalk'
 import type NetAdapter from '../net/NetAdapter.ts'
 import ClientZeroMQAdapter from '../net/adapters/ClientZeroMQAdapter.ts'
-import replier from '../lib/Replier.ts'
 import type { BibInput } from '@acha/distribuidos/schemas/InputSchema'
-import { logVerbose } from '@acha/distribuidos'
+import { logVerbose, writeLog } from '@acha/distribuidos'
+import { replier } from '../lib/Replier.ts'
 
 const netCS: NetAdapter = new ClientZeroMQAdapter({
   host: process.env.STORAGE_MANAGER_HOST!,
   port: process.env.STORAGE_MANAGER_PORT!
 })
+
+try {
+  await writeLog("Trying to init ClientZeroMQAdapter")
+  await netCS.init();
+  await writeLog("Succesfully inited ClientZeroMQAdapter")
+} catch (err) {
+  await writeLog(`Error Trying to init ClientZeroMQAdapter`)
+}
 
 export default async ({ body }: {
   body: BibInput
@@ -23,18 +31,21 @@ export default async ({ body }: {
 
   switch (body.operation) {
     case "renew":
-      // req = netCS.sendRenew({ body })
+      req = netCS.sendRenew({ body })
       break;
     case "return":
-      // req = netCS.sendReturn({ body })
+      req = netCS.sendReturn({ body })
       break;
 
     case "reserve":
-      // req = netCS.sendReserve({ body })
-      await req;
-      replier.sock.send(`OK ${new Date()}`); // TODO: revisar que llegue bien
+      req = netCS.sendReserve({ body })
+      writeLog("Replying reserve")
+      writeLog(await req)
+      replier.send(JSON.stringify(await req));
       break;
   }
+
+  await req;
 
   process.stdout.write(colors.green('\x1b[4D done\n'));
 
