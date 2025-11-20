@@ -1,47 +1,34 @@
 import 'dotenv/config'
 import colors from 'chalk'
-import type NetAdapter from '../net/NetAdapter.ts'
-import ClientZeroMQAdapter from '../net/adapters/ClientZeroMQAdapter.ts'
-import type { BibInput } from '@acha/distribuidos/schemas/InputSchema'
-import { logVerbose, writeLog } from '@acha/distribuidos'
-import { replier } from '../lib/Replier.ts'
+import type { ZMQSender } from '@acha/distribuidos/zeromq/ZMQSender'
+import ZMQSyncRequest from '../net/ZMQSyncRequest.ts'
+import { OperationType, type BibOperation } from '@acha/distribuidos/schemas/BibOperation'
+import { writeLog } from '@acha/distribuidos'
+import type { ZMQReceiver } from '@acha/distribuidos/zeromq/ZMQReceiver'
+import ZMQSyncReply from '../net/ZMQSyncReply.ts'
 
-const netCS: NetAdapter = new ClientZeroMQAdapter({
-  host: process.env.STORAGE_MANAGER_HOST!,
-  port: process.env.STORAGE_MANAGER_PORT!
-})
+export default async (op: BibOperation) => {
+  const syncSocket: ZMQSender = ZMQSyncRequest.getInstance();
+  const replier: ZMQReceiver = ZMQSyncReply.getInstance();
 
-try {
-  await writeLog("Trying to init ClientZeroMQAdapter")
-  await netCS.init();
-  await writeLog("Succesfully inited ClientZeroMQAdapter")
-} catch (err) {
-  await writeLog(`Error Trying to init ClientZeroMQAdapter`)
-}
-
-export default async ({ body }: {
-  body: BibInput
-}) => {
-  logVerbose(JSON.stringify(body, null, 2))
-
-  process.stdout.write(`${colors.cyan(body.operation)} > ${colors.yellow('user:')} ${body.user_id} > ${colors.yellow(`${body.copy_id ? "copy_id" : "book_id"}:`)} ${body.copy_id ?? body.book_id}`);
+  process.stdout.write(op.toString());
   process.stdout.write(`${colors.cyan(" ...")}`);
 
   let req;
 
-  switch (body.operation) {
-    case "renew":
-      req = netCS.sendRenew({ body })
+  switch (op.getOperation()) {
+    case OperationType.RENEW:
+      req = syncSocket.sendRenew({ body: op })
       break;
-    case "return":
-      req = netCS.sendReturn({ body })
+    case OperationType.RETURN:
+      req = syncSocket.sendReturn({ body: op })
       break;
 
-    case "reserve":
-      req = netCS.sendReserve({ body })
+    case OperationType.RESERVE:
+      req = syncSocket.sendReserve({ body: op })
       writeLog("Replying reserve")
       writeLog(await req)
-      replier.send(JSON.stringify(await req));
+      replier.send(await req);
       break;
   }
 

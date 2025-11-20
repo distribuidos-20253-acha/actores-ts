@@ -1,9 +1,10 @@
 import { program } from "commander";
-import { init, sock } from "./src/lib/ServerApp.ts";
 import inputExecution from "./src/inputExecution/index.ts";
-import { inputSchema, isValid, type BibInput } from "@acha/distribuidos/schemas/InputSchema";
 import { Config, showFigletTitle, writeLog } from "@acha/distribuidos";
-import { initReplier, replier } from "./src/lib/Replier.ts";
+import type { ZMQReceiver } from "@acha/distribuidos/zeromq/ZMQReceiver";
+import ZMQSyncReply from "./src/net/ZMQSyncReply.ts";
+import { OperationFactory } from "@acha/distribuidos/schemas/BibOperation";
+import ZMQAsyncSubscriber from "./src/net/ZMQAsyncSubscriber.ts";
 const config = Config.getInstance();
 config.setVersion("0.1.15")
 
@@ -31,25 +32,17 @@ config.set("type", TYPE)
 showFigletTitle(`ACTOR_${(TYPE as string)}`)
 
 if (config.get("type") == "reserve") {
-  await initReplier()
+  const replier: ZMQReceiver = ZMQSyncReply.getInstance();
 
-  for await (const [msg] of replier) {
+  for await (const [msg] of replier.sock) {
     await writeLog(`Socket received a message`)
     try {
       const obj = JSON.parse(msg?.toString() ?? "")
       await writeLog(obj)
 
-      if (!(await isValid(obj))) {
-        await writeLog(`Invalid Message, cannot parse because it's invalid`)
-        console.log("Cannot parse this request")
-        continue;
-      }
+      const op = await OperationFactory.parseOperation(obj);
 
-      const qZod = await inputSchema.safeParseAsync(obj)
-
-      await inputExecution({
-        body: qZod.data as BibInput
-      })
+      await inputExecution(op)
     } catch (err) {
       console.log(err)
       await writeLog(`Invalid Message, cannot parse`)
@@ -58,25 +51,17 @@ if (config.get("type") == "reserve") {
   }
 
 } else {
-  await init()
+  const channel = ZMQAsyncSubscriber.getInstance();
 
-  for await (const [topic, msg] of sock) {
+  for await (const [topic, msg] of channel.sock) {
     await writeLog(`Socket received a message`)
     try {
       const obj = JSON.parse(msg?.toString() ?? "")
       await writeLog(obj)
 
-      if (!(await isValid(obj))) {
-        await writeLog(`Invalid Message, cannot parse because it's invalid`)
-        console.log("Cannot parse this request")
-        continue;
-      }
+      const op = await OperationFactory.parseOperation(obj);
 
-      const qZod = await inputSchema.safeParseAsync(obj)
-
-      await inputExecution({
-        body: qZod.data as BibInput
-      })
+      await inputExecution(op)
     } catch (err) {
       await writeLog(`Invalid Message, cannot parse`)
       console.log("cannot parse message", msg?.toString())
