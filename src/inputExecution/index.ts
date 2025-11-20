@@ -3,13 +3,18 @@ import colors from 'chalk'
 import type { ZMQSender } from '@acha/distribuidos/zeromq/ZMQSender'
 import ZMQSyncRequest from '../net/ZMQSyncRequest.ts'
 import { OperationType, type BibOperation } from '@acha/distribuidos/schemas/BibOperation'
-import { writeLog } from '@acha/distribuidos'
+import { Config, writeLog } from '@acha/distribuidos'
 import type { ZMQReceiver } from '@acha/distribuidos/zeromq/ZMQReceiver'
 import ZMQSyncReply from '../net/ZMQSyncReply.ts'
 
 export default async (op: BibOperation) => {
   const syncSocket: ZMQSender = ZMQSyncRequest.getInstance();
-  const replier: ZMQReceiver = ZMQSyncReply.getInstance();
+
+  let replier;
+
+  if (Config.getInstance().get("type") == "reserve") {
+    replier = ZMQSyncReply.getInstance();
+  }
 
   process.stdout.write(op.toString());
   process.stdout.write(`${colors.cyan(" ...")}`);

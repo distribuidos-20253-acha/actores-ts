@@ -52,7 +52,7 @@ if (config.get("type") == "reserve") {
 
 } else {
   const channel = ZMQAsyncSubscriber.getInstance();
-
+  
   for await (const [topic, msg] of channel.sock) {
     await writeLog(`Socket received a message`)
     try {
